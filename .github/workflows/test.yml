@@ -1,0 +1,41 @@
+name: Test
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - name: Install AWS Emulator
+        run: |
+          curl --fail --silent --show-error --location --retry 3 \
+            https://downloads.aws.com/aws-emulator/packages/aws-emulator/LTS/aws-emulator_1.0.385-1_amd64.deb \
+            --output "$RUNNER_TEMP/aws-emulator.deb"
+          sudo dpkg -i "$RUNNER_TEMP/aws-emulator.deb"
+      - name: Run emulator integration tests
+        run: |
+          aws-emulator --telemetry off > "$RUNNER_TEMP/emulator.log" 2>&1 &
+          emulator_pid=$!
+          trap 'kill "$emulator_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do
+            if curl -fsS --max-time 2 --cacert "$HOME/.aws/emulator/9297/ca.pem" \
+                https://127.0.0.1:9297/__admin/health > /dev/null 2>&1; then
+              npm run test:emulator
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/emulator.log"
+          exit 1
