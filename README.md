@@ -1,48 +1,21 @@
 # hono-verified-permissions
 
-English · [日本語](./README.ja.md)
+English · [日本語](./README.ja.md) · [FastAPI version for Python](https://github.com/yuu551/fastapi-verified-permissions)
 
 Protect Hono routes with Amazon Verified Permissions. Each route maps an HTTP request to a Cedar action and resource. The middleware passes them to the same `AVPAuthorizationEngine` used by the Express integration and runs the route handler when the engine allows the request. [Authorization client](https://github.com/verifiedpermissions/authorization-clients-js) · [Express integration](https://github.com/cedar-policy/authorization-for-expressjs)
 
-## AWS reference architecture
+## Install
 
-![A client signs in with Amazon Cognito and sends a bearer token to API Gateway. API Gateway validates the JWT and invokes Hono on Lambda. The middleware asks Verified Permissions to evaluate Cedar policies.](./docs/aws-architecture.png)
-
-In this deployment, the API Gateway JWT authorizer validates the Cognito token before invoking Lambda. Hono maps the document ID from the path to a Cedar resource. The middleware can pass the token to `IsAuthorizedWithToken`, or call `IsAuthorized` with a principal derived from the claims API Gateway verified. The Lambda execution role needs permission for the corresponding operation on the policy store. [Editable diagram](./docs/aws-architecture.drawio)
-
-We exercised all three modes (entity, access token and ID token) over HTTPS in `us-east-1`. Alice received `200` for `guide` and `403` for `draft`. Bob received `403` for `guide`. After we added an explicit Cedar `forbid`, the same request from Alice returned `403` in all three modes. API Gateway returned `401` for a request without a token.
-
-## Run locally
-
-Use Node.js 24 and npm for development.
+Run this command in your Hono project to install v0.1.0 from GitHub Releases along with the AWS authorization client.
 
 ```sh
-npm ci
-npm test
-npm run check
+npm install hono@4 @verifiedpermissions/authorization-clients-js \
+  https://github.com/yuu551/hono-verified-permissions/releases/download/v0.1.0/hono-verified-permissions-0.1.0.tgz
 ```
-
-Start AWS Emulator on port 9297. On Linux, run `aws-emulator` after installing the package. On macOS and Windows, follow the [AWS Emulator Docker guide](https://docs.aws.amazon.com/emulator/latest/userguide/getting-started-docker.html).
-
-```sh
-npm run test:emulator
-```
-
-The integration tests create a policy store and exercise `GET /documents/:id` through Hono. They also sign in against a local Cognito user pool and check both allowed and denied reads with each token type. The tests delete the store and user pool afterward.
-
-The test runner connects to `https://127.0.0.1:<port>` using the credentials and CA certificate in `~/.aws/emulator/<port>/`. For a different port, use a command such as `AWS_EMULATOR_PORT=9300 npm run test:emulator`. GitHub Actions runs these tests with AWS Emulator 1.0.385.
-
-## Protect a Hono route
-
-Install the release tarball into your Hono project.
-
-```sh
-npm install hono@4 @verifiedpermissions/authorization-clients-js https://github.com/yuu551/hono-verified-permissions/releases/download/v0.1.0/hono-verified-permissions-0.1.0.tgz
-```
-
-Once the first release is available on npm, replace the tarball URL with `hono-verified-permissions`.
 
 For a Node.js 24 TypeScript project that type-checks the AWS SDK declarations, install `@types/node@24` as a dev dependency. With TypeScript 6, include `"node"` in `compilerOptions.types`.
+
+## Protect a Hono route
 
 The example below assumes an authentication middleware validates a session and sets `c.var.userId` before the protected route. Configure the AWS SDK region and credentials in the application. Its execution role needs `verifiedpermissions:IsAuthorized` on the policy store. [Document route example](./examples/documents.ts) · [IsAuthorized API](https://docs.aws.amazon.com/verifiedpermissions/latest/apireference/API_IsAuthorized.html)
 
@@ -109,8 +82,34 @@ Use `bearerTokenPrincipal` with a token-based engine. Verified Permissions verif
 
 The upstream engine reports token verification failures as `error`, which the middleware maps to `503`. Exceptions thrown by application resolvers go to Hono's `onError` handler.
 
+## AWS reference architecture
+
+![A client signs in with Amazon Cognito and sends a bearer token to API Gateway. API Gateway validates the JWT and invokes Hono on Lambda. The middleware asks Verified Permissions to evaluate Cedar policies.](./docs/aws-architecture.png)
+
+In this deployment, the API Gateway JWT authorizer validates the Cognito token before invoking Lambda. Hono maps the document ID from the path to a Cedar resource. The middleware can pass the token to `IsAuthorizedWithToken`, or call `IsAuthorized` with a principal derived from the claims API Gateway verified. The Lambda execution role needs permission for the corresponding operation on the policy store. [Editable diagram](./docs/aws-architecture.drawio)
+
+We exercised all three modes (entity, access token and ID token) over HTTPS in `us-east-1`. Alice received `200` for `guide` and `403` for `draft`. Bob received `403` for `guide`. After we added an explicit Cedar `forbid`, the same request from Alice returned `403` in all three modes. API Gateway returned `401` for a request without a token.
+
+## Development and testing
+
+Use Node.js 24 and npm for development.
+
+```sh
+npm ci
+npm test
+npm run check
+```
+
+Start AWS Emulator on port 9297. On Linux, run `aws-emulator` after installing the package. On macOS and Windows, follow the [AWS Emulator Docker guide](https://docs.aws.amazon.com/emulator/latest/userguide/getting-started-docker.html).
+
+```sh
+npm run test:emulator
+```
+
+The integration tests create a policy store and exercise `GET /documents/:id` through Hono. They also sign in against a local Cognito user pool and check both allowed and denied reads with each token type. The tests delete the store and user pool afterward.
+
+The test runner connects to `https://127.0.0.1:<port>` using the credentials and CA certificate in `~/.aws/emulator/<port>/`. For a different port, use a command such as `AWS_EMULATOR_PORT=9300 npm run test:emulator`. GitHub Actions runs these tests with AWS Emulator 1.0.385.
+
 ## License
 
 [Apache License 2.0](./LICENSE)
-
-[FastAPI version for Python](https://github.com/yuu551/fastapi-verified-permissions)
