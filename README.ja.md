@@ -4,6 +4,8 @@
 
 Amazon Verified Permissions を使って Hono のルートを保護する TypeScript ミドルウェアです。ルートごとに Cedar のアクションとリソースを指定します。認可の判定には Express 版と同じ公式クライアントの `AVPAuthorizationEngine` を使えます。[公式クライアント](https://github.com/verifiedpermissions/authorization-clients-js) · [Express 版](https://github.com/cedar-policy/authorization-for-expressjs)
 
+[ブラウザーで認可を試す](https://yuu551.github.io/verified-permissions-playground/) · [画面付き AWS CDK サンプル](https://github.com/yuu551/verified-permissions-playground/blob/main/README.ja.md)
+
 ## インストール
 
 Hono プロジェクトで次のコマンドを実行すると、GitHub Releases の v0.1.0 と認可に使う AWS クライアントがインストールされます。

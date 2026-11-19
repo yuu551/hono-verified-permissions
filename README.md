@@ -4,6 +4,8 @@ English · [日本語](./README.ja.md) · [FastAPI version for Python](https://g
 
 Protect Hono routes with Amazon Verified Permissions. Each route maps an HTTP request to a Cedar action and resource. The middleware passes them to the same `AVPAuthorizationEngine` used by the Express integration and runs the route handler when the engine allows the request. [Authorization client](https://github.com/verifiedpermissions/authorization-clients-js) · [Express integration](https://github.com/cedar-policy/authorization-for-expressjs)
 
+[Try the playground](https://yuu551.github.io/verified-permissions-playground/) · [Deploy the AWS CDK sample](https://github.com/yuu551/verified-permissions-playground)
+
 ## Install
 
 Run this command in your Hono project to install v0.1.0 from GitHub Releases along with the AWS authorization client.
