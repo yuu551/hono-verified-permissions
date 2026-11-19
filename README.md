@@ -34,11 +34,13 @@ The test runner connects to `https://127.0.0.1:<port>` using the credentials and
 
 ## Protect a Hono route
 
-To try the middleware in another project, run `npm pack` in this repository, then install the generated tarball in the consuming project.
+Install the release tarball into your Hono project.
 
 ```sh
-npm install hono@4 @verifiedpermissions/authorization-clients-js /path/to/hono-verified-permissions-0.1.0.tgz
+npm install hono@4 @verifiedpermissions/authorization-clients-js https://github.com/yuu551/hono-verified-permissions/releases/download/v0.1.0/hono-verified-permissions-0.1.0.tgz
 ```
+
+Once the first release is available on npm, replace the tarball URL with `hono-verified-permissions`.
 
 For a Node.js 24 TypeScript project that type-checks the AWS SDK declarations, install `@types/node@24` as a dev dependency. With TypeScript 6, include `"node"` in `compilerOptions.types`.
 
@@ -110,3 +112,5 @@ The upstream engine reports token verification failures as `error`, which the mi
 ## License
 
 [Apache License 2.0](./LICENSE)
+
+[FastAPI version for Python](https://github.com/yuu551/fastapi-verified-permissions)

@@ -3,6 +3,15 @@
   "version": "0.1.0",
   "description": "Cedar authorization middleware for Hono with Amazon Verified Permissions support",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yuu551/hono-verified-permissions.git"
+  },
+  "homepage": "https://github.com/yuu551/hono-verified-permissions#readme",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
   "type": "module",
   "exports": {
     ".": {

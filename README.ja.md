@@ -38,11 +38,13 @@ npm run test:emulator
 
 ## Hono で使う
 
-手元の別のプロジェクトで試すには、このリポジトリで `npm pack` を実行します。作成した `.tgz` ファイルのパスを指定して、利用するプロジェクトにインストールしてください。
+公開リリースを別のプロジェクトで使うには、次のコマンドを実行します。
 
 ```sh
-npm install hono@4 @verifiedpermissions/authorization-clients-js /path/to/hono-verified-permissions-0.1.0.tgz
+npm install hono@4 @verifiedpermissions/authorization-clients-js https://github.com/yuu551/hono-verified-permissions/releases/download/v0.1.0/hono-verified-permissions-0.1.0.tgz
 ```
+
+npm での初回公開後は、tarball の URL を `hono-verified-permissions` に置き換えてインストールできます。
 
 Node.js 24 の TypeScript プロジェクトで AWS SDK の型もチェックする場合は、開発依存に `@types/node@24` を追加してください。TypeScript 6 では `compilerOptions.types` に `"node"` を含めます。
 
@@ -114,3 +116,5 @@ const authorize = createAuthorizer({
 ## ライセンス
 
 [Apache License 2.0](./LICENSE)
+
+[FastAPI 版（Python）](https://github.com/yuu551/fastapi-verified-permissions)
