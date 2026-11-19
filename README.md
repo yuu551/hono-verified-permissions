@@ -1,10 +1,20 @@
 # hono-verified-permissions
 
-Hono のルートに Amazon Verified Permissions の認可を追加する TypeScript ミドルウェアです。ルートごとに Cedar のアクションとリソースを指定します。認可判定には Express 版でも使われている公式の `AVPAuthorizationEngine` を利用できます。[公式クライアント](https://github.com/verifiedpermissions/authorization-clients-js) · [Express 版](https://github.com/cedar-policy/authorization-for-expressjs)
+English · [日本語](./README.ja.md)
 
-## ローカルで試す
+Protect Hono routes with Amazon Verified Permissions. Each route maps an HTTP request to a Cedar action and resource. The middleware passes them to the same `AVPAuthorizationEngine` used by the Express integration and runs the route handler when the engine allows the request. [Authorization client](https://github.com/verifiedpermissions/authorization-clients-js) · [Express integration](https://github.com/cedar-policy/authorization-for-expressjs)
 
-開発環境には Node.js 24 と npm を使います。
+## AWS reference architecture
+
+![A client signs in with Amazon Cognito and sends a bearer token to API Gateway. API Gateway validates the JWT and invokes Hono on Lambda. The middleware asks Verified Permissions to evaluate Cedar policies.](./docs/aws-architecture.png)
+
+In this deployment, the API Gateway JWT authorizer validates the Cognito token before invoking Lambda. Hono maps the document ID from the path to a Cedar resource. The middleware can pass the token to `IsAuthorizedWithToken`, or call `IsAuthorized` with a principal derived from the claims API Gateway verified. The Lambda execution role needs permission for the corresponding operation on the policy store. [Editable diagram](./docs/aws-architecture.drawio)
+
+We exercised all three modes (entity, access token and ID token) over HTTPS in `us-east-1`. Alice received `200` for `guide` and `403` for `draft`. Bob received `403` for `guide`. After we added an explicit Cedar `forbid`, the same request from Alice returned `403` in all three modes. API Gateway returned `401` for a request without a token.
+
+## Run locally
+
+Use Node.js 24 and npm for development.
 
 ```sh
 npm ci
@@ -12,27 +22,27 @@ npm test
 npm run check
 ```
 
-AWS Emulator をポート 9297 で起動し、次のコマンドを実行します。Linux のパッケージ版は `aws-emulator` で起動できます。macOS と Windows の起動手順は [AWS 公式の Docker ガイド](https://docs.aws.amazon.com/emulator/latest/userguide/getting-started-docker.html) にあります。
+Start AWS Emulator on port 9297. On Linux, run `aws-emulator` after installing the package. On macOS and Windows, follow the [AWS Emulator Docker guide](https://docs.aws.amazon.com/emulator/latest/userguide/getting-started-docker.html).
 
 ```sh
 npm run test:emulator
 ```
 
-このテストはローカルのポリシーストアを作り、Hono の `GET /documents/:id` にリクエストを送ります。Alice に `guide` の閲覧を許可すると、Alice は `200`、Bob は `403`、未認証のリクエストは `401` になります。さらにローカルの Cognito ユーザープールでサインインし、発行されたアクセス・ID トークンそれぞれで閲覧の許可と拒否を確認します。テスト終了時にストアとユーザープールを削除します。
+The integration tests create a policy store and exercise `GET /documents/:id` through Hono. They also sign in against a local Cognito user pool and check both allowed and denied reads with each token type. The tests delete the store and user pool afterward.
 
-接続先は `https://127.0.0.1:<port>` です。テストプロセスは `~/.aws/emulator/<port>/` の認証情報と CA 証明書を使います。別ポートで起動した場合は `AWS_EMULATOR_PORT=9300 npm run test:emulator` のように指定します。GitHub Actions のワークフローは AWS Emulator 1.0.385 を使用します。
+The test runner connects to `https://127.0.0.1:<port>` using the credentials and CA certificate in `~/.aws/emulator/<port>/`. For a different port, use a command such as `AWS_EMULATOR_PORT=9300 npm run test:emulator`. GitHub Actions runs these tests with AWS Emulator 1.0.385.
 
-## Hono で使う
+## Protect a Hono route
 
-手元の別プロジェクトから試すには、このリポジトリで `npm pack` を実行します。利用側で次のようにインストールしてください。
+To try the middleware in another project, run `npm pack` in this repository, then install the generated tarball in the consuming project.
 
 ```sh
 npm install hono@4 @verifiedpermissions/authorization-clients-js /path/to/hono-verified-permissions-0.1.0.tgz
 ```
 
-Node.js 24 の TypeScript プロジェクトで AWS SDK の型もチェックする場合は、開発依存に `@types/node@24` を追加してください。TypeScript 6 では `compilerOptions.types` に `"node"` を含めます。
+For a Node.js 24 TypeScript project that type-checks the AWS SDK declarations, install `@types/node@24` as a dev dependency. With TypeScript 6, include `"node"` in `compilerOptions.types`.
 
-次の例では、認証ミドルウェアがセッションを検証して `c.var.userId` にユーザー ID を設定する想定です。AWS SDK のリージョンと認証情報はアプリケーション側で設定します。実行ロールには使用するストアへの `verifiedpermissions:IsAuthorized` 権限が必要です。[動作するルートの例](./examples/documents.ts) · [IsAuthorized API](https://docs.aws.amazon.com/verifiedpermissions/latest/apireference/API_IsAuthorized.html)
+The example below assumes an authentication middleware validates a session and sets `c.var.userId` before the protected route. Configure the AWS SDK region and credentials in the application. Its execution role needs `verifiedpermissions:IsAuthorized` on the policy store. [Document route example](./examples/documents.ts) · [IsAuthorized API](https://docs.aws.amazon.com/verifiedpermissions/latest/apireference/API_IsAuthorized.html)
 
 ```ts
 import { AVPAuthorizationEngine } from '@verifiedpermissions/authorization-clients-js'
@@ -41,7 +51,7 @@ import { createAuthorizer } from 'hono-verified-permissions'
 
 type AppEnv = { Variables: { userId: string | null } }
 const app = new Hono<AppEnv>()
-// ここでセッション認証用のミドルウェアを登録する
+// Register middleware here that verifies the session and sets c.var.userId.
 const authorize = createAuthorizer<AppEnv>({
   engine: new AVPAuthorizationEngine({
     policyStoreId: process.env.POLICY_STORE_ID!,
@@ -57,7 +67,7 @@ app.get(path, authorize<typeof path>({
 }), (c) => c.json({ document: c.req.param('id'), reader: c.var.authorizerInfo.principalUid.id }))
 ```
 
-対応する Cedar ポリシーは次のように書けます。
+For this session-based example, the following Cedar policy lets Alice read the guide.
 
 ```cedar
 permit(
@@ -67,11 +77,11 @@ permit(
 );
 ```
 
-`principal`、`resource` と、任意の `context`、`entities` は同期・非同期の関数を受け付けます。関数から `c.req`、`c.var`、`c.env` を参照できます。テナント所属や文書の所有者などの属性は、アプリケーションが検証したセッションやデータベースから取得してください。
+The `principal`, `resource`, `context` and `entities` callbacks can be synchronous or asynchronous and can read `c.req`, `c.var` and `c.env`. The last two callbacks are optional. Resolve attributes such as tenant membership and document ownership from a verified session or trusted application data.
 
-### Cognito のトークンを使う
+### Use Cognito tokens
 
-ポリシーストアにユーザープールを ID ソースとして登録し、実行ロールに `verifiedpermissions:IsAuthorizedWithToken` を許可します。アクセストークンを受け取る API では、次の設定で `Authorization: Bearer <token>` を Verified Permissions に渡せます。ID トークンを使う場合は `callType` に `'identityToken'` を指定します。[トークン方式のサンプル](./examples/token-documents.ts) · [ID ソースの登録](https://docs.aws.amazon.com/verifiedpermissions/latest/apireference/API_CreateIdentitySource.html)
+Register the user pool as an identity source and grant the application role `verifiedpermissions:IsAuthorizedWithToken` on the store. The following setup passes the token from the `Authorization: Bearer <token>` header to Verified Permissions. For ID tokens, set `callType` to `'identityToken'`. [Token example](./examples/token-documents.ts) · [CreateIdentitySource API](https://docs.aws.amazon.com/verifiedpermissions/latest/apireference/API_CreateIdentitySource.html)
 
 ```ts
 import { bearerTokenPrincipal, createAuthorizer } from 'hono-verified-permissions'
@@ -86,17 +96,17 @@ const authorize = createAuthorizer({
 })
 ```
 
-`bearerTokenPrincipal` はトークン方式専用です。トークンの検証と principal の特定は Verified Permissions が行います。許可時にはエンジンが返した `principalUid` と `determiningPolicies` を後続のハンドラーから `c.var.authorizerInfo` で参照できます。
+Use `bearerTokenPrincipal` with a token-based engine. Verified Permissions verifies the token and identifies the principal. For a Cognito principal, the entity ID in the policy takes the form `<user-pool-id>|<sub>`. After an allow decision, the handler can read the engine's `principalUid` and `determiningPolicies` from `c.var.authorizerInfo`.
 
-| 判定 | Hono の動作 |
+| Outcome | Hono behavior |
 | --- | --- |
-| principal を取得できない、または Bearer ヘッダーの形式が不正 | `401 Unauthorized` |
-| エンジンが `deny` を返す | `403 Forbidden` |
-| エンジンが `allow` を返す | 後続のハンドラーを実行 |
-| エンジンが `error` を返す、または例外を投げる | `503 Authorization unavailable` |
+| Missing principal or malformed bearer header | Returns `401 Unauthorized` |
+| Engine returns `deny` | Returns `403 Forbidden` |
+| Engine returns `allow` | Runs the next handler |
+| Engine returns `error` or throws | Returns `503 Authorization unavailable` |
 
-公式エンジンはトークンの検証エラーも `error` として返すため、その場合の応答は `503` です。アプリケーション側のリゾルバーが投げた例外は Hono の `onError` に渡ります。
+The upstream engine reports token verification failures as `error`, which the middleware maps to `503`. Exceptions thrown by application resolvers go to Hono's `onError` handler.
 
-## ライセンス
+## License
 
 [Apache License 2.0](./LICENSE)

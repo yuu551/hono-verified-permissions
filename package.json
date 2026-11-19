@@ -13,7 +13,10 @@
   "types": "./dist/index.d.ts",
   "files": [
     "dist",
-    "examples"
+    "examples",
+    "README.ja.md",
+    "docs/aws-architecture.png",
+    "docs/aws-architecture.drawio"
   ],
   "sideEffects": false,
   "scripts": {

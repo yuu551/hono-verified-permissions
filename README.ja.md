@@ -1,6 +1,16 @@
 # hono-verified-permissions
 
+[English](./README.md) · 日本語
+
 Amazon Verified Permissions を使って Hono のルートを保護する TypeScript ミドルウェアです。ルートごとに Cedar のアクションとリソースを指定します。認可の判定には Express 版と同じ公式クライアントの `AVPAuthorizationEngine` を使えます。[公式クライアント](https://github.com/verifiedpermissions/authorization-clients-js) · [Express 版](https://github.com/cedar-policy/authorization-for-expressjs)
+
+## AWS での構成例
+
+![クライアントは Cognito でサインインし、API Gateway にトークンを送ります。API Gateway が JWT を検証し、Lambda 上の Hono が Verified Permissions に認可を問い合わせます。](./docs/aws-architecture.png)
+
+この構成では、API Gateway の JWT オーソライザーが Cognito のトークンを検証してから Lambda を呼び出します。Hono はパスに含まれる文書 ID を Cedar のリソースに対応づけます。トークン方式ではミドルウェアが `IsAuthorizedWithToken` にトークンを渡します。エンティティ方式では、API Gateway が検証したクレームから principal を組み立てて `IsAuthorized` を呼び出します。Lambda の実行ロールには、対象のポリシーストアで該当する API を呼び出す権限が必要です。[編集用の構成図](./docs/aws-architecture.drawio)
+
+`us-east-1` にデプロイし、エンティティ、アクセストークン、ID トークンの3方式を HTTPS 経由で検証しました。いずれも Alice が `guide` を読むと `200`、`draft` を読むと `403` が返り、Bob が `guide` を読むと `403` になりました。Cedar の `forbid` を追加すると、3方式とも Alice の `guide` 閲覧は `403` になりました。トークンを付けずに送ったリクエストには API Gateway が `401` を返しました。
 
 ## ローカルで試す
 
@@ -90,7 +100,7 @@ const authorize = createAuthorizer({
 })
 ```
 
-`bearerTokenPrincipal` はトークン方式専用です。Verified Permissions がトークンを検証し、principal を特定します。リクエストが許可されると、後続のハンドラーでは `c.var.authorizerInfo` を通じて、エンジンが返した `principalUid` と `determiningPolicies` を参照できます。
+`bearerTokenPrincipal` はトークン方式専用です。Verified Permissions がトークンを検証し、principal を特定します。Cognito を使う場合、ポリシーで指定する principal の ID は `<user-pool-id>|<sub>` の形式です。リクエストが許可されると、後続のハンドラーでは `c.var.authorizerInfo` を通じて、エンジンが返した `principalUid` と `determiningPolicies` を参照できます。
 
 | 判定 | Hono の動作 |
 | --- | --- |
