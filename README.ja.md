@@ -8,11 +8,10 @@ Amazon Verified Permissions を使って Hono のルートを保護する TypeSc
 
 ## インストール
 
-Hono プロジェクトで次のコマンドを実行すると、GitHub Releases の v0.1.0 と認可に使う AWS クライアントがインストールされます。
+Hono のプロジェクトで、ミドルウェアと Amazon Verified Permissions の認可クライアントをインストールします。
 
 ```sh
-npm install hono@4 @verifiedpermissions/authorization-clients-js \
-  https://github.com/yuu551/hono-verified-permissions/releases/download/v0.1.0/hono-verified-permissions-0.1.0.tgz
+npm install hono@4 hono-verified-permissions @verifiedpermissions/authorization-clients-js
 ```
 
 Node.js 24 の TypeScript プロジェクトで AWS SDK の型もチェックする場合は、開発依存に `@types/node@24` を追加してください。TypeScript 6 では `compilerOptions.types` に `"node"` を含めます。

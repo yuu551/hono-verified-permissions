@@ -8,11 +8,10 @@ Protect Hono routes with Amazon Verified Permissions. Each route maps an HTTP re
 
 ## Install
 
-Run this command in your Hono project to install v0.1.0 from GitHub Releases along with the AWS authorization client.
+Install the middleware and the Amazon Verified Permissions authorization client in your Hono project.
 
 ```sh
-npm install hono@4 @verifiedpermissions/authorization-clients-js \
-  https://github.com/yuu551/hono-verified-permissions/releases/download/v0.1.0/hono-verified-permissions-0.1.0.tgz
+npm install hono@4 hono-verified-permissions @verifiedpermissions/authorization-clients-js
 ```
 
 For a Node.js 24 TypeScript project that type-checks the AWS SDK declarations, install `@types/node@24` as a dev dependency. With TypeScript 6, include `"node"` in `compilerOptions.types`.
